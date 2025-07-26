@@ -7,18 +7,33 @@ namespace CatalogAPI.Products.UpdateProduct
         : ICommand<UpdateProductResult>;
     public record UpdateProductResult(bool IsSuccess);
 
-    public class UpdateProductCommandHandler(IDocumentSession session, ILogger<UpdateProductCommandHandler> logger)
+    public class UpdateProductCommandValidator : AbstractValidator<UpdateProductCommand>
+    {
+        public UpdateProductCommandValidator()
+        {
+            RuleFor(command => command.Id).NotEmpty().WithMessage("Product ID is required");
+
+            RuleFor(command => command.Name)
+                .NotEmpty().WithMessage("Name is required")
+                .Length(2, 150)
+                .WithMessage("Name must be between 2 to 150 characters");
+
+            RuleFor(command => command.Price)
+                .GreaterThan(0)
+                .WithMessage("Price should be greater than 0");
+        }
+    }
+
+    public class UpdateProductCommandHandler(IDocumentSession session)
         : ICommandHandler<UpdateProductCommand, UpdateProductResult>
     {
         public async Task<UpdateProductResult> Handle(UpdateProductCommand command, CancellationToken cancellationToken)
         {
-            logger.LogInformation("Put command handler for update product {@Query}", command);
-
             var product = await session.LoadAsync<Product>(command.Id, cancellationToken);
 
             if (product == null)
             {
-                throw new ProductNotFoundExceptions();
+                throw new ProductNotFoundExceptions(command.Id);
             }
 
             product.Name = command.Name;
