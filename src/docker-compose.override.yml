@@ -11,6 +11,25 @@ services:
     volumes:
       - postgres_catalog:/var/lib/postgresql/data
 
+  basketdb:
+    container_name: basketdb
+    environment:
+      - POSTGRES_USER=postgres
+      - POSTGRES_PASSWORD=4810
+      - POSTGRES_DB=Basketdb
+    restart: always
+    ports:
+      - "5433:5432"
+    volumes:
+      - postgres_basket:/var/lib/postgresql/data 
+
+  distributedcache:
+    container_name: distributedcache
+    image: redis
+    restart: always
+    ports:
+      - "6379:6379"
+
   catalogapi:
     environment:
       - ASPNETCORE_ENVIRONMENT=Development
@@ -25,3 +44,22 @@ services:
     volumes:
       - ${APPDATA}/Microsoft/UserSecrets:/home/app/.microsoft/usersecrets:ro
       - ${APPDATA}/ASP.NET/Https:/home/app/.aspnet/https:ro
+
+  basket.api:
+    environment:
+      - ASPNETCORE_ENVIRONMENT=Development
+      - ASPNETCORE_HTTP_PORTS=8080
+      - ASPNETCORE_HTTPS_PORTS=8081
+      - connectionStrings__Database=Server=basketdb;Port=5433;Database=Basketdb;User Id=postgres;Password=4810;Include Error Detail=true
+      - connectionStrings__Redis=distributedcache:6379
+    depends_on:
+      - basketdb
+      - distributedcache
+    ports:
+      - "6001:8080"
+      - "6061:8081"
+    volumes:
+      - ${APPDATA}/Microsoft/UserSecrets:/home/app/.microsoft/usersecrets:ro
+      - ${APPDATA}/Microsoft/UserSecrets:/root/.microsoft/usersecrets:ro
+      - ${APPDATA}/ASP.NET/Https:/home/app/.aspnet/https:ro
+      - ${APPDATA}/ASP.NET/Https:/root/.aspnet/https:ro
